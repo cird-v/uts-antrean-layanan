@@ -1,0 +1,39 @@
+# Jenkins CI/CD server (+ ngrok opsional) untuk pipeline UTS
+#
+#   cd jenkins
+#   docker compose up -d --build                     # Jenkins saja  -> http://localhost:8080
+#   NGROK_AUTHTOKEN=xxxx docker compose --profile tunnel up -d   # + ngrok tunnel
+#
+name: jenkins-ci
+
+services:
+  jenkins:
+    build: .
+    image: jenkins-docker:lts
+    container_name: jenkins
+    # root agar bisa memakai /var/run/docker.sock (cukup untuk lingkungan lab/UTS)
+    user: root
+    restart: unless-stopped
+    ports:
+      - "${JENKINS_PORT:-8080}:8080"
+      - "50000:50000"
+    volumes:
+      # PENTING: path di host == path di kontainer. Karena Jenkins memanggil Docker
+      # Engine host, bind mount `./frontend` pada docker-compose.yml aplikasi akan
+      # di-resolve di host sebagai /var/jenkins_home/workspace/<job>/frontend.
+      # Dengan path yang sama, folder itu benar-benar ada di host.
+      - /var/jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  ngrok:
+    image: ngrok/ngrok:3-alpine
+    container_name: jenkins-ngrok
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: ["http", "jenkins:8080", "--log", "stdout"]
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN:-}   # wajib diisi saat profile tunnel
+    ports:
+      - "4040:4040"   # dashboard ngrok -> lihat URL publik di http://localhost:4040
+    depends_on:
+      - jenkins

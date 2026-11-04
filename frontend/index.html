@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Antrean Layanan Mahasiswa</title>
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --card: #ffffff;
+      --text: #1f2430;
+      --muted: #6b7280;
+      --border: #e3e5ea;
+      --primary: #b6252a;
+      --primary-dark: #8f1c20;
+      --ok: #15803d;
+      --warn: #b45309;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header h1 { margin: 0; font-size: 1.35rem; }
+    header p { margin: 2px 0 0; opacity: .85; font-size: .9rem; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,.15);
+      padding: 6px 12px; border-radius: 999px; font-size: .85rem;
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #9ca3af; }
+    .dot.ok { background: #4ade80; }
+    .dot.down { background: #fbbf24; }
+
+    main { max-width: 1100px; margin: 24px auto; padding: 0 16px; display: grid; gap: 20px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .card h2 { margin: 0 0 14px; font-size: 1.05rem; }
+
+    label { display: block; font-size: .85rem; font-weight: 600; margin: 12px 0 4px; }
+    input, select {
+      width: 100%; padding: 10px 12px; font-size: .95rem;
+      border: 1px solid var(--border); border-radius: 8px; background: #fff;
+    }
+    input:focus, select:focus { outline: 2px solid rgba(182,37,42,.25); border-color: var(--primary); }
+
+    button {
+      cursor: pointer; border: none; border-radius: 8px;
+      padding: 10px 16px; font-size: .95rem; font-weight: 600;
+    }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); color: #fff; width: 100%; margin-top: 16px; }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
+    .btn-outline { background: #fff; color: var(--primary); border: 1px solid var(--primary); padding: 6px 12px; font-size: .85rem; }
+    .btn-outline:hover:not(:disabled) { background: #fdf2f2; }
+
+    .ticket {
+      margin-top: 16px; padding: 14px; border: 2px dashed var(--primary);
+      border-radius: 10px; text-align: center; display: none;
+    }
+    .ticket .num { font-size: 2.4rem; font-weight: 800; color: var(--primary); letter-spacing: 2px; }
+    .ticket small { color: var(--muted); }
+
+    .serving { text-align: center; }
+    .serving .num { font-size: 4rem; font-weight: 800; color: var(--primary); line-height: 1.1; letter-spacing: 3px; }
+    .serving .who { color: var(--muted); min-height: 1.4em; margin-bottom: 14px; }
+    .serving .btn-primary { max-width: 320px; }
+
+    .stats { display: flex; gap: 12px; margin-top: 18px; }
+    .stat { flex: 1; background: var(--bg); border-radius: 8px; padding: 10px; text-align: center; }
+    .stat b { display: block; font-size: 1.4rem; }
+    .stat span { font-size: .8rem; color: var(--muted); }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    th { font-size: .78rem; text-transform: uppercase; color: var(--muted); letter-spacing: .5px; }
+    tr.first td { background: #fdf2f2; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 6px; background: var(--bg); font-size: .8rem; }
+    .empty { text-align: center; color: var(--muted); padding: 28px 0; }
+
+    #toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(120px);
+      background: #1f2430; color: #fff; padding: 12px 18px; border-radius: 8px;
+      font-size: .9rem; transition: transform .25s; max-width: 90vw; z-index: 10;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.error { background: var(--primary-dark); }
+    footer { text-align: center; color: var(--muted); font-size: .8rem; margin: 10px 0 30px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Antrean Layanan Mahasiswa</h1>
+      <p>Layanan Administrasi Akademik (LAA) &middot; Student Service Queue System</p>
+    </div>
+    <span class="pill"><span id="apiDot" class="dot"></span><span id="apiStatus">Menghubungkan...</span></span>
+  </header>
+
+  <main>
+    <div class="grid">
+      <!-- Ambil nomor antrean (POST /queue) -->
+      <section class="card">
+        <h2>Ambil Nomor Antrean</h2>
+        <form id="queueForm" autocomplete="off">
+          <label for="name">Nama Lengkap *</label>
+          <input id="name" name="name" maxlength="100" placeholder="contoh: Budi Santoso" required>
+
+          <label for="nim">NIM</label>
+          <input id="nim" name="nim" maxlength="20" inputmode="numeric" pattern="[0-9]*" placeholder="contoh: 1301220001">
+
+          <label for="service">Jenis Layanan</label>
+          <select id="service" name="service">
+            <option value="akademik">Akademik (LAA)</option>
+            <option value="keuangan">Keuangan</option>
+            <option value="kemahasiswaan">Kemahasiswaan</option>
+            <option value="umum">Informasi Umum</option>
+          </select>
+
+          <button type="submit" class="btn-primary" id="submitBtn">Ambil Nomor</button>
+        </form>
+
+        <div class="ticket" id="ticket">
+          <small>Nomor antrean Anda</small>
+          <div class="num" id="ticketNum">-</div>
+          <small id="ticketInfo"></small>
+        </div>
+      </section>
+
+      <!-- Loket: panggil antrean (DELETE /queue?index=0) -->
+      <section class="card serving">
+        <h2>Sedang Dilayani</h2>
+        <div class="num" id="servingNum">---</div>
+        <div class="who" id="servingWho">Belum ada antrean yang dipanggil</div>
+        <button class="btn-primary" id="callNextBtn" disabled>Panggil Antrean Berikutnya</button>
+
+        <div class="stats">
+          <div class="stat"><b id="statWaiting">0</b><span>Menunggu</span></div>
+          <div class="stat"><b id="statNext">-</b><span>Berikutnya</span></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Daftar antrean (GET /queue) -->
+    <section class="card">
+      <h2>Daftar Antrean</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Tiket</th><th>Nama</th><th>NIM</th><th>Layanan</th><th>Waktu</th><th>Aksi</th></tr>
+          </thead>
+          <tbody id="queueBody">
+            <tr><td colspan="7" class="empty">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>UTS Cloud Computing &middot; Docker &middot; Nginx &middot; Python REST API &middot; Jenkins CI/CD</footer>
+  <div id="toast"></div>
+
+  <script>
+    // Default: lewat reverse proxy Nginx (/api -> http://backend:8000).
+    // Bisa di-override: index.html?api=http://localhost:8000
+    const API_BASE = new URLSearchParams(location.search).get("api") || "/api";
+    const REFRESH_MS = 3000;
+
+    const $ = (id) => document.getElementById(id);
+    let busy = false;
+
+    async function api(method, path, body) {
+      const opts = { method, headers: {} };
+      if (body !== undefined) {
+        opts.headers["Content-Type"] = "application/json";
+        opts.body = JSON.stringify(body);
+      }
+      const res = await fetch(API_BASE + path, opts);
+      let data;
+      try { data = await res.json(); } catch { data = { message: "Respon server bukan JSON (HTTP " + res.status + ")" }; }
+      if (!res.ok) throw new Error(data.message || "HTTP " + res.status);
+      return data;
+    }
+
+    function toast(msg, isError = false) {
+      const t = $("toast");
+      t.textContent = msg;
+      t.className = "show" + (isError ? " error" : "");
+      clearTimeout(toast.timer);
+      toast.timer = setTimeout(() => (t.className = ""), 3000);
+    }
+
+    function setApiStatus(ok, text) {
+      $("apiDot").className = "dot " + (ok ? "ok" : "down");
+      $("apiStatus").textContent = text;
+    }
+
+    function formatTime(iso) {
+      const d = new Date(iso);
+      return isNaN(d) ? "-" : d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    function cell(text) {
+      const td = document.createElement("td");
+      td.textContent = text;
+      return td;
+    }
+
+    function render(payload) {
+      const queue = payload.data || [];
+      const tbody = $("queueBody");
+      tbody.replaceChildren();
+
+      if (queue.length === 0) {
+        const tr = document.createElement("tr");
+        const td = cell("Belum ada antrean. Silakan ambil nomor.");
+        td.colSpan = 7;
+        td.className = "empty";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      }
+
+      queue.forEach((item, index) => {
+        const tr = document.createElement("tr");
+        if (index === 0) tr.className = "first";
+        tr.appendChild(cell(index + 1));
+        const ticketTd = cell("");
+        const b = document.createElement("b");
+        b.textContent = item.ticket;
+        ticketTd.appendChild(b);
+        tr.appendChild(ticketTd);
+        tr.appendChild(cell(item.name));
+        tr.appendChild(cell(item.nim || "-"));
+        const svcTd = cell("");
+        const tag = document.createElement("span");
+        tag.className = "tag";
+        tag.textContent = item.service_label || item.service;
+        svcTd.appendChild(tag);
+        tr.appendChild(svcTd);
+        tr.appendChild(cell(formatTime(item.created_at)));
+
+        const actTd = document.createElement("td");
+        const btn = document.createElement("button");
+        btn.className = "btn-outline";
+        btn.textContent = index === 0 ? "Panggil" : "Hapus";
+        btn.onclick = () => removeAt(index);
+        actTd.appendChild(btn);
+        tr.appendChild(actTd);
+        tbody.appendChild(tr);
+      });
+
+      const last = payload.last_called;
+      $("servingNum").textContent = last ? last.ticket : "---";
+      $("servingWho").textContent = last
+        ? `${last.name} · ${last.service_label || last.service}`
+        : "Belum ada antrean yang dipanggil";
+      $("statWaiting").textContent = queue.length;
+      $("statNext").textContent = queue.length ? queue[0].ticket : "-";
+      $("callNextBtn").disabled = queue.length === 0;
+    }
+
+    async function loadQueue() {
+      try {
+        const payload = await api("GET", "/queue");
+        render(payload);
+        setApiStatus(true, "API terhubung");
+      } catch (err) {
+        setApiStatus(false, "API tidak tersedia");
+      }
+    }
+
+    async function removeAt(index) {
+      if (busy) return;
+      busy = true;
+      try {
+        const res = await api("DELETE", "/queue?index=" + index);
+        toast(res.message);
+      } catch (err) {
+        toast("Gagal: " + err.message, true);
+      } finally {
+        busy = false;
+        loadQueue();
+      }
+    }
+
+    $("callNextBtn").onclick = () => removeAt(0);
+
+    $("queueForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const body = {
+        name: $("name").value.trim(),
+        nim: $("nim").value.trim(),
+        service: $("service").value,
+      };
+      if (!body.name) return toast("Nama wajib diisi", true);
+
+      $("submitBtn").disabled = true;
+      try {
+        const res = await api("POST", "/queue", body);
+        $("ticketNum").textContent = res.data.ticket;
+        $("ticketInfo").textContent = `${res.data.name} · ${res.data.service_label} · posisi ke-${res.position}`;
+        $("ticket").style.display = "block";
+        $("queueForm").reset();
+        toast(res.message);
+      } catch (err) {
+        toast("Gagal: " + err.message, true);
+      } finally {
+        $("submitBtn").disabled = false;
+        loadQueue();
+      }
+    });
+
+    loadQueue();
+    setInterval(loadQueue, REFRESH_MS);
+  </script>
+</body>
+</html>
