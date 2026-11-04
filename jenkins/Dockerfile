@@ -23,3 +23,7 @@ RUN jenkins-plugin-cli --plugins \
     credentials-binding \
     timestamper \
     ws-cleanup
+
+# Konfigurasi otomatis (admin user + pipeline job), disalin ke JENKINS_HOME saat start
+COPY init.groovy.d/ /usr/share/jenkins/ref/init.groovy.d/
+ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"

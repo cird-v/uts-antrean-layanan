@@ -203,12 +203,18 @@ Jenkins dijalankan di Docker dengan akses ke Docker Engine host (`/var/run/docke
 
 ```bash
 cd jenkins
+cp .env.example .env      # isi JENKINS_ADMIN_PASSWORD & APP_REPO_URL (file .env tidak di-commit)
 docker compose up -d --build
-docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 ```
 
-Buka http://localhost:8080 → masukkan password awal → **Install suggested plugins** → buat user admin.
-(Plugin `git`, `github`, `workflow-aggregator`, `timestamper` sudah ter-install dari `jenkins/Dockerfile`.)
+Saat start, skrip di `jenkins/init.groovy.d/` otomatis:
+- `01-security.groovy` → membuat user admin dari `.env` dan melewati setup wizard
+- `02-pipeline-job.groovy` → membuat job **`queue-system-pipeline`** (Pipeline script from SCM, repo `APP_REPO_URL`,
+  credential `github-pat`, branch `*/main`, Script Path `Jenkinsfile`, trigger *GitHub hook trigger for GITScm polling*)
+
+Buka http://localhost:8080 (atau port `JENKINS_PORT`) → login admin → job sudah tersedia → klik **Build Now** sekali.
+Plugin `git`, `github`, `workflow-aggregator`, `timestamper` sudah ter-install dari `jenkins/Dockerfile`.
+Langkah manual pada 6.4 hanya diperlukan jika `APP_REPO_URL` dikosongkan.
 
 > **Kenapa `/var/jenkins_home:/var/jenkins_home`?** Jenkins memanggil Docker Engine host. Bind mount `./frontend` di
 > `docker-compose.yml` di-resolve oleh Engine sebagai `/var/jenkins_home/workspace/<job>/frontend`. Dengan path host = path
