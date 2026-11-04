@@ -19,15 +19,17 @@ services:
       - JENKINS_ADMIN_ID=${JENKINS_ADMIN_ID:-admin}
       - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD:-}
       - APP_REPO_URL=${APP_REPO_URL:-}
+      - JENKINS_HOME=/var/lib/docker/volumes/jenkins-data/_data
     ports:
       - "${JENKINS_PORT:-8080}:8080"
       - "50000:50000"
     volumes:
-      # PENTING: path di host == path di kontainer. Karena Jenkins memanggil Docker
-      # Engine host, bind mount `./frontend` pada docker-compose.yml aplikasi akan
-      # di-resolve di host sebagai /var/jenkins_home/workspace/<job>/frontend.
-      # Dengan path yang sama, folder itu benar-benar ada di host.
-      - /var/jenkins_home:/var/jenkins_home
+      # PENTING: Named volume `jenkins-data` dipasang di path yang SAMA dengan lokasinya
+      # di host Docker. Jenkins memanggil Docker Engine host, sehingga bind mount
+      # `./frontend` pada docker-compose.yml aplikasi di-resolve di host sebagai
+      # <JENKINS_HOME>/workspace/<job>/frontend — folder itu benar-benar ada di host.
+      # Named volume juga persisten dan executable (dibutuhkan Git askpass untuk PAT).
+      - jenkins-data:/var/lib/docker/volumes/jenkins-data/_data
       - /var/run/docker.sock:/var/run/docker.sock
 
   ngrok:
@@ -42,3 +44,7 @@ services:
       - "4040:4040"   # dashboard ngrok -> lihat URL publik di http://localhost:4040
     depends_on:
       - jenkins
+
+volumes:
+  jenkins-data:
+    name: jenkins-data

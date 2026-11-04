@@ -216,9 +216,11 @@ Buka http://localhost:8080 (atau port `JENKINS_PORT`) → login admin → job su
 Plugin `git`, `github`, `workflow-aggregator`, `timestamper` sudah ter-install dari `jenkins/Dockerfile`.
 Langkah manual pada 6.4 hanya diperlukan jika `APP_REPO_URL` dikosongkan.
 
-> **Kenapa `/var/jenkins_home:/var/jenkins_home`?** Jenkins memanggil Docker Engine host. Bind mount `./frontend` di
-> `docker-compose.yml` di-resolve oleh Engine sebagai `/var/jenkins_home/workspace/<job>/frontend`. Dengan path host = path
-> kontainer, folder tersebut benar-benar ada, sehingga bind mount tetap berfungsi saat deploy dari Jenkins.
+> **Kenapa `jenkins-data:/var/lib/docker/volumes/jenkins-data/_data`?** Jenkins memanggil Docker Engine host. Bind mount
+> `./frontend` di `docker-compose.yml` di-resolve oleh Engine sebagai `<JENKINS_HOME>/workspace/<job>/frontend` **di host**.
+> Named volume `jenkins-data` dipasang di path yang sama dengan lokasinya di host, sehingga folder workspace benar-benar ada
+> bagi Docker Engine. Named volume juga persisten (tidak hilang saat Docker Desktop restart) dan mengizinkan eksekusi file,
+> yang dibutuhkan plugin Git untuk checkout memakai PAT. Path `/var/jenkins_home` di Docker Desktop berupa tmpfs `noexec`.
 >
 > Jika port 8080 sudah terpakai: `JENKINS_PORT=8090 docker compose up -d` (PowerShell: `$env:JENKINS_PORT="8090"; docker compose up -d`).
 
